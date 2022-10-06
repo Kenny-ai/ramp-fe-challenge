@@ -51,7 +51,7 @@ export function App() {
         <hr className="RampBreak--l" />
 
         <InputSelect<Employee>
-          isLoading={isLoading}
+          isLoading={employeeUtils.loading}
           defaultValue={EMPTY_EMPLOYEE}
           items={employees === null ? [] : [EMPTY_EMPLOYEE, ...employees]}
           label="Filter by employee"
@@ -64,8 +64,7 @@ export function App() {
             if (newValue === null) {
               return
             }
-
-            await loadTransactionsByEmployee(newValue.id)
+            newValue.id ? await loadTransactionsByEmployee(newValue.id) : await loadAllTransactions()
           }}
         />
 
@@ -81,15 +80,17 @@ export function App() {
                   <TransactionPane key={transaction.id} transaction={transaction} />
                 ))}
               </div>
-              <button
-                className="RampButton"
-                disabled={paginatedTransactionsUtils.loading}
-                onClick={async () => {
-                  await loadAllTransactions()
-                }}
-              >
-                View More
-              </button>
+              {paginatedTransactions?.nextPage && (
+                <button
+                  className="RampButton"
+                  disabled={paginatedTransactionsUtils.loading}
+                  onClick={async () => {
+                    await loadAllTransactions()
+                  }}
+                >
+                  View More
+                </button>
+              )}
             </Fragment>
           )}
         </div>
