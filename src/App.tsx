@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
-import { Employee } from "./utils/types"
+import { Employee, Transaction } from "./utils/types"
 import { InputSelect } from "./components/InputSelect"
 import { TransactionPane } from "./components/TransactionPane"
 import { Instructions } from "./components/Instructions"
@@ -8,10 +8,12 @@ import { usePaginatedTransactions } from "./hooks/usePaginatedTransactions"
 import { useTransactionsByEmployee } from "./hooks/useTransactionsByEmployee"
 import { EMPTY_EMPLOYEE } from "./utils/constants"
 
+
 export function App() {
   const { data: employees, ...employeeUtils } = useEmployees()
   const { data: paginatedTransactions, ...paginatedTransactionsUtils } = usePaginatedTransactions()
   const { data: transactionsByEmployee, ...transactionsByEmployeeUtils } = useTransactionsByEmployee()
+
   const [isLoading, setIsLoading] = useState(false)
 
   const transactions = useMemo(
@@ -42,7 +44,17 @@ export function App() {
       loadAllTransactions()
     }
   }, [employeeUtils.loading, employees, loadAllTransactions])
-
+  // created a function to compare all employee id's and then created another array to compare the employee ids to the first and return if they are equal or not
+  const compareEmployees = (transactionsByEmployee : Transaction[] | null ) => {
+    const result = transactionsByEmployee
+    const idMap = result?.map((transaction) => {
+      return transaction.employee.id
+    })
+    const allEqual = (array: string[] | undefined) => array?.every( value => value === array[0] )
+    return allEqual(idMap)
+  }
+ 
+  
   return (
     <Fragment>
       <main className="MainContainer">
@@ -51,7 +63,8 @@ export function App() {
         <hr className="RampBreak--l" />
 
         <InputSelect<Employee>
-          isLoading={employeeUtils.loading}
+          // if there are no employees set it to true otherwise return the loading state as false
+          isLoading={!employees ? true : false}
           defaultValue={EMPTY_EMPLOYEE}
           items={employees === null ? [] : [EMPTY_EMPLOYEE, ...employees]}
           label="Filter by employee"
@@ -61,10 +74,12 @@ export function App() {
             label: `${item.firstName} ${item.lastName}`,
           })}
           onChange={async (newValue) => {
-            if (newValue === null) {
-              return
+            //checking the employee id & empty employee is set to ""
+            // we want to make sure it gets to all transactions
+            if (newValue !== null && newValue.id === '') {
+              return await loadAllTransactions()
             }
-            newValue.id ? await loadTransactionsByEmployee(newValue.id) : await loadAllTransactions()
+            await loadTransactionsByEmployee(newValue?.id ?? '')
           }}
         />
 
@@ -80,17 +95,16 @@ export function App() {
                   <TransactionPane key={transaction.id} transaction={transaction} />
                 ))}
               </div>
-              {paginatedTransactions?.nextPage && (
-                <button
-                  className="RampButton"
-                  disabled={paginatedTransactionsUtils.loading}
-                  onClick={async () => {
-                    await loadAllTransactions()
-                  }}
-                >
-                  View More
-                </button>
-              )}
+              <button
+                className="RampButton"
+                // disabled={true}  
+                disabled={compareEmployees(transactionsByEmployee) ? true : false}
+                onClick={async () => {
+                  await loadAllTransactions()
+                }}
+              >
+                View More
+              </button>
             </Fragment>
           )}
         </div>
